@@ -11,7 +11,7 @@ Design docs (UML class, state machine, sequence diagram) go in `docs/`.
 - `tests/`                    pytest tests (state machine, translator, end-to-end delivery)
 
 ## Run the tests
-    cd capstone-middleware
+    cd Intel-Capstone
     python3 -m venv .venv
     source venv/bin/activate
     pip install -r requirements.txt
