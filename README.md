@@ -13,7 +13,7 @@ Design docs (UML class, state machine, sequence diagram) go in `docs/`.
 ## Run the tests
     cd Intel-Capstone
     python3 -m venv .venv
-    source venv/bin/activate
+    source .venv/bin/activate
     pip install -r requirements.txt
     pytest
 
@@ -21,3 +21,15 @@ Design docs (UML class, state machine, sequence diagram) go in `docs/`.
 ## Status
 Skeleton only. The decision algorithm is a placeholder (first available AMR). Retry limits, timeouts,
 message formats and the return trip for empty bins are TBD (see open questions in the design doc).
+
+## Architecture and coding plan
+
+The repository currently contains a middleware skeleton. The documents below describe the target implementation and distinguish working prototype choices from unresolved physical interfaces.
+
+- [Architecture and ownership](docs/ARCHITECTURE.md)
+- [Message and interface contracts](docs/INTERFACES.md)
+- [Implementation tasks and acceptance scenarios](docs/IMPLEMENTATION_PLAN.md)
+
+Start with A1 (shared models/contracts), then implement the UML state machine and simulators. Preserve the existing UML-facing interfaces while adding transport, persistence and recovery behind them.
+
+For a virtual environment named `.venv`, activate it with `source .venv/bin/activate` before running the existing tests.
