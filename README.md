@@ -21,3 +21,17 @@ Design docs (UML class, state machine, sequence diagram) go in `docs/`.
 ## Status
 Skeleton only. The decision algorithm is a placeholder (first available AMR). Retry limits, timeouts,
 message formats and the return trip for empty bins are TBD (see open questions in the design doc).
+
+## Operator console demo
+A console version of the operator interface (shows the fill prompt, accepts `done`). Run from the repo root:
+
+    python3 demo_operator.py
+
+Commands: `list`, `done [bin_id]`, `quit`. Code: `src/capstone/simulators/console_operator.py`.
+
+### Roles (optional)
+    python3 demo_operator.py filler        # bin filler: list, loaded
+    python3 demo_operator.py technician    # tool technician: list, empty, request, refill
+
+Operator messages follow the dictionary envelope in `docs/INTERFACES.md` (`operator.bin_loaded`,
+`operator.bin_emptied`, `operator.material_requested`). Roles are a prototype setting, not real accounts.

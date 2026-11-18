@@ -1,0 +1,21 @@
+"""Demo of the console operator interface. Run from the repo root:  python3 demo_operator.py"""
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent / "src"))  # so 'capstone' is importable without installing
+
+from capstone.middleware.middleware import Middleware
+from capstone.models.amr import AMR
+from capstone.models.bin import Bin
+from capstone.models.delivery_request import DeliveryRequest
+from capstone.models.enums import PointType
+from capstone.models.point import Point
+from capstone.simulators.console_operator import ConsoleOperatorInterface
+from capstone.simulators.simulated import SimulatedFleetManager, SimulatedGantry, SimulatedMCS
+
+operator = ConsoleOperatorInterface()
+mw = Middleware(SimulatedMCS(), [SimulatedFleetManager([AMR("AMR_1")])], SimulatedGantry(), operator)
+request = DeliveryRequest("R1", "wafer", Bin("B1"), Point("H1", PointType.STORAGE_HANDOFF),
+                          Point("T1", PointType.TOOL_POINT))
+mw.receive_delivery_request(request)   # triggers the request prompt
+operator.run(mw)                       # operator types 'done' to send the report
