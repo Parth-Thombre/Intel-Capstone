@@ -1,6 +1,8 @@
 from ..models.enums import AccessResult, AMRStatus, BinState, ReportType, RequestStatus, SignalType
+from ..models.operator_roles import is_allowed
 from . import request_state
 from .message_translator import translate_messages
+from .operator_messages import parse_message
 
 
 class Middleware:
@@ -13,6 +15,9 @@ class Middleware:
         self.gantry = gantry
         self.operator_interface = operator_interface
         self.requests = {}  # request_id -> DeliveryRequest
+        self.rejected = []           # (message or report, reason) for anything refused
+        self.material_requests = []  # MATERIAL_REQUESTED reports; who turns these into deliveries is open (SCRUM-65)
+        self._seen_message_ids = set()
 
     # ---- raw messages -> receive_* (see sequence diagram) ----
     def translate_messages(self, raw_message: str) -> dict:
@@ -26,12 +31,36 @@ class Middleware:
                 request.bin.bin_id, request.material_type, request.delivery_point.point_id)
         self._try_assign(request)
 
+    def receive_operator_message(self, raw) -> None:
+        """Operator message as a dict (or JSON text) in the INTERFACES.md envelope.
+        Validates it, turns it into a HumanReport and hands it to receive_report."""
+        message = self.translate_messages(raw) if isinstance(raw, str) else raw
+        if message.get("message_id") in self._seen_message_ids:
+            return  # same event delivered twice: no second effect
+        try:
+            report = parse_message(message, self.requests)
+        except ValueError as error:
+            self.rejected.append((message, str(error)))
+            return
+        self._seen_message_ids.add(message["message_id"])
+        self.receive_report(report)
+
     def receive_report(self, report) -> None:
+        if report.role is not None and not is_allowed(report.role, report.report_type):
+            self.rejected.append((report, f"{report.role.name} may not send {report.report_type.name}"))
+            return
         if report.report_type == ReportType.BIN_LOADED:
             report.bin.state = BinState.LOADED
             for request in list(self.requests.values()):
                 if request.bin is report.bin:
                     self._try_assign(request)
+        elif report.report_type == ReportType.BIN_EMPTIED:
+            if report.bin.state != BinState.DELIVERED:
+                self.rejected.append((report, f"bin {report.bin.bin_id} is {report.bin.state.name}, not DELIVERED"))
+                return
+            report.bin.state = BinState.EMPTIED  # the empty-bin return is a separate, still undefined flow
+        elif report.report_type == ReportType.MATERIAL_REQUESTED:
+            self.material_requests.append(report)  # recorded only
 
     def receive_amr_status(self, amr, status) -> None:
         request = self._request_for(amr)
