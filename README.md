@@ -13,7 +13,7 @@ Design docs (UML class, state machine, sequence diagram) go in `docs/`.
 ## Run the tests
     cd Intel-Capstone
     python3 -m venv .venv
-    source venv/bin/activate
+    source .venv/bin/activate
     pip install -r requirements.txt
     pytest
 
@@ -35,3 +35,14 @@ Commands: `list`, `done [bin_id]`, `quit`. Code: `src/capstone/simulators/consol
 
 Operator messages follow the dictionary envelope in `docs/INTERFACES.md` (`operator.bin_loaded`,
 `operator.bin_emptied`, `operator.material_requested`). Roles are a prototype setting, not real accounts.
+## Architecture and coding plan
+
+The repository currently contains a middleware skeleton. The documents below describe the target implementation and distinguish working prototype choices from unresolved physical interfaces.
+
+- [Architecture and ownership](docs/ARCHITECTURE.md)
+- [Message and interface contracts](docs/INTERFACES.md)
+- [Implementation tasks and acceptance scenarios](docs/IMPLEMENTATION_PLAN.md)
+
+Start with A1 (shared models/contracts), then implement the UML state machine and simulators. Preserve the existing UML-facing interfaces while adding transport, persistence and recovery behind them.
+
+For a virtual environment named `.venv`, activate it with `source .venv/bin/activate` before running the existing tests.
