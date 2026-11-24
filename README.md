@@ -1,6 +1,9 @@
 # Capstone Middleware (skeleton)
 
 Software-only simulation of the middleware between the MCS, fleet managers, door, gantry, operators and process tools.
+
+The target transport scope includes storage handoff to process tool, process tool to storage handoff, and process tool to another process tool. All three use a delivery request with pickup and destination points. The current skeleton and operator demo do not yet implement complete workflows for all three routes.
+
 Design docs (UML class, state machine, sequence diagram) go in `docs/`.
 
 ## Layout
@@ -10,12 +13,34 @@ Design docs (UML class, state machine, sequence diagram) go in `docs/`.
 - `src/capstone/simulators/`  fake versions of those parties, for testing without the fab
 - `tests/`                    pytest tests (state machine, translator, end-to-end delivery)
 
+## Development setup
+
+Use Python 3.12 as the team baseline. Package installation requires Python 3.12 or newer; the verification baseline is Python 3.12. Check the version before creating the environment. Do not reuse an environment created with Python 3.6. If `.venv` already uses an older interpreter, deactivate it and move it aside before creating a fresh environment.
+
+From the repository root on macOS or Linux:
+
+```bash
+python3.12 --version
+python3.12 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -e ".[dev]"
+```
+
+On Windows PowerShell, create the environment with `py -3.12 -m venv .venv` and activate it with `.\.venv\Scripts\Activate.ps1`, then run the same `python -m pip` commands.
+
+The editable install makes `capstone` importable from the `src/` directory and includes the development dependencies. `pyproject.toml` is the dependency source; `python -m pip install -r requirements.txt` is a compatibility alternative for the same development installation. Run either installation command from the repository root. No MQTT or hardware dependencies are required yet.
+
+In VS Code, select `.venv` through **Python: Select Interpreter** so the editor and terminal use the same environment.
+
 ## Run the tests
-    cd Intel-Capstone
-    python3 -m venv .venv
-    source .venv/bin/activate
-    pip install -r requirements.txt
-    pytest
+
+After installing the development package and activating the environment:
+
+```bash
+python --version
+python -m pytest
+```
 
 
 ## Status

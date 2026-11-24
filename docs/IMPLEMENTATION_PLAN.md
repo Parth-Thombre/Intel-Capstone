@@ -9,12 +9,12 @@ Use [the architecture](ARCHITECTURE.md) and [interface contracts](INTERFACES.md)
 | A1 | Extend models with IDs, typed commands/events, execution phase and observation freshness | None | Valid/invalid schema examples and round-trip serialization |
 | A2 | Implement UML state transitions and guards | A1 | Each specified transition and illegal-event case tested |
 | A3 | Replace object-identity matching and add request deduplication | A1 | Reconstructed objects correlate by IDs; conflicting duplicate rejected |
-| B1 | Implement mock MCS and tool readiness/receipt simulator | A1 | One tool need creates one request; stale readiness blocks transfer |
+| B1 | Implement mock MCS, tool pickup/release and destination readiness/receipt simulators | A1 | Explicit route endpoints; one tool need creates one request; stale source/destination readiness blocks transfer |
 | B2 | Implement fleet, dock and door simulators | A1 | Delayed results, faults and duplicate commands can be injected |
 | C1 | Implement assignment policy and atomic reservations | A1 | Two requests cannot acquire the same AMR/bin/destination |
 | C2 | Implement SQLite repositories and pending-command publishing | A1 | State/event/command atomicity; pending commands survive restart |
 | C3 | Implement custody and location tracking | A1, C2 | Bin location, contents and stale/unknown observations queryable |
-| D1 | Connect orchestrator through existing interfaces | A2, A3, B1, B2, C1, C2, C3 | Complete simulated pickup, destination transfer and receipt |
+| D1 | Connect orchestrator through UML interfaces and agreed endpoint extensions | A2, A3, B1, B2, C1, C2, C3 | Storage-to-tool, tool-to-storage and tool-to-tool each complete simulated pickup, destination transfer and receipt |
 | D2 | Implement deadlines, retries and incident recovery | D1 | Denied access, pickup timeout, confirmation timeout and uncertain transfer tested |
 | D3 | Add MQTT transport behind adapters | A1, B1, B2 | Separate simulator processes use the same contracts |
 | D4 | Add CLI for submission, status, history and recovery inspection | D1 | A teammate can run the documented demonstration |
@@ -25,7 +25,10 @@ Initial independent work can proceed on models/contracts, adapter design, simula
 
 ## Required regression scenarios
 
-- Successful request through contents preparation, identification, assignment, collection, door passage, destination transfer and receipt.
+- Successful storage-to-tool request through contents preparation, identification, assignment, collection, applicable door passage, destination transfer and receipt.
+- Successful tool-to-storage request with source release and configured storage receipt; empty-bin readiness is checked only for a request explicitly requiring an empty bin.
+- Successful tool-to-tool request with distinct tool IDs, source release and receiving-tool receipt; no implicit gantry command or storage fill prompt.
+- Same-point transport requests and missing/stale source readiness cannot authorize collection.
 - Moving before collection does not imply IN_TRANSIT; arrival alone does not imply DELIVERED.
 - Wrong bin, tool, request, command or location cannot advance a request.
 - Unknown, occupied or stale destination blocks authorization, including a readiness change after assignment.
@@ -43,7 +46,7 @@ The current middleware treats MOVING as collection, matches bin/tool objects by 
 
 ## Demonstration milestones
 
-1. In-process simulated normal delivery with complete event history.
+1. In-process simulated transport with complete event history for storage-to-tool, tool-to-storage and tool-to-tool scenarios.
 2. Persistent delivery, inventory and reservation state with failure handling.
 3. Separate MQTT-connected simulators, fault injection and restart reconciliation.
 4. Physical signal and transfer demonstration with EE/ME, including measured timing.

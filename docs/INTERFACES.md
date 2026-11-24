@@ -24,15 +24,23 @@ Status: proposed prototype contract. External vendor and EE protocols are transl
 
 Adapters must validate field types, supported schema version, known identities and operation-specific required fields. Serialize enum names as strings. Stamp local receipt time independently from device observation time. Use a device boot/session ID and monotonic sequence for ordered status observations; reconcile after a new session rather than trusting old retained state.
 
+## Transport endpoints
+
+Every transport request identifies a `bin_id`, `pickup_point_id` and `delivery_point_id`. Wire IDs resolve to the existing domain `Bin` and `Point` objects. Supported route pairs are storage-to-tool, tool-to-storage and tool-to-tool; source and destination IDs must differ.
+
+Source readiness and destination readiness are separate observations. Tool-source readiness/release and collection evidence replace storage preparation evidence when pickup is at a tool. A material-needed signal does not by itself identify a tool-to-tool source; the request creator must provide both endpoints.
+
+Transfer and receipt events must correlate to the request, matching bin and relevant endpoint. Configure the receipt authority by destination: process tool, storage controller or authorized recipient. Define any new event schemas before implementing them; the current `ToolHandshake` only represents tool signals.
+
 ## Commands and events
 
 | Interface | Command or input | Expected evidence |
 | --- | --- | --- |
 | MCS | Delivery request | Accepted/rejected with reason; request status updates |
 | FleetManager | Assign transport task | Accepted/rejected, pickup arrival, collected bin, destination arrival, task clearance, blocked/error |
-| Storage | Prepare bin or observe independent readiness | Identified bin, ready, AMR alignment, transfer complete, fault |
+| Storage | Prepare source bin or observe independent readiness; request destination acceptance when receiving | Identified bin, source/destination readiness, AMR alignment, transfer complete, destination receipt, fault |
 | Door | Request access for AMR/request/door | Granted/denied, actual door state, passage complete, fault |
-| Tool | Material need, readiness, inbound notice/authorization request | Readiness, authorization, destination transfer complete, receipt |
+| Tool | Material need, source pickup/release request, inbound notice/authorization request | Source pickup readiness/release, collection, destination readiness/authorization, transfer complete, receipt |
 | Operator | Fill prompt and human report | Contents prepared, authorized receipt, recovery confirmation |
 
 Assignment accepted is not collection. Robot arrival is not transfer. Destination transfer is not recipient receipt. Match request, command, source, bin, location and current phase before advancing.

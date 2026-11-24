@@ -4,9 +4,27 @@ Status: proposed coding baseline for team review. This document specifies target
 
 ## Purpose and scope
 
-The Python middleware coordinates delivery of one identified bin from storage to a process tool or its delivery shelf. It receives requests, checks readiness, coordinates transport and transfer, tracks bin custody and contents, and reports results to the MCS. Device controllers execute physical motion and enforce local interlocks.
+The Python middleware coordinates transport of one identified bin between storage handoff points and process-tool points, including transport between two different process tools. It receives requests, checks readiness, coordinates transport and transfer, tracks bin custody and contents, and reports results to the MCS. Device controllers execute physical motion and enforce local interlocks.
 
 The prototype uses simulated external systems first, followed by physical integration. Simulation supports development; the EE report's demonstration includes physical signals and transfer authorization and confirmation.
+
+## Transport scenarios
+
+The coding baseline includes three route scenarios. Use one `DeliveryRequest` with `pickup_point` and `delivery_point`; route-specific adapters supply readiness and handoff evidence. A process-tool point can be a source or a destination. Storage handoff points represent the accessible transfer boundary, not an internal gantry coordinate.
+
+| Scenario | Pickup point | Destination point | Preparation and confirmation |
+| --- | --- | --- | --- |
+| Storage to tool | STORAGE_HANDOFF | TOOL_POINT | Storage prepares the matching bin; the receiving tool or authorized recipient confirms receipt |
+| Tool to storage | TOOL_POINT | STORAGE_HANDOFF | Source tool releases the matching bin; the receiving storage controller or authorized recipient confirms receipt |
+| Tool to tool | TOOL_POINT | A different TOOL_POINT | Source tool releases the matching bin; the receiving tool or authorized recipient confirms receipt |
+
+For every route, validate distinct source and destination IDs, source readiness, bin identity, destination readiness and transfer clearance. Reserve the relevant pickup and destination resources. Call the gantry preparation interface only when the source requires that integration; a tool-to-tool request must not implicitly trigger gantry preparation or a storage fill prompt.
+
+Tool pickup readiness means that the bin can be released for collection. It is distinct from destination readiness to accept a bin and from operator confirmation that contents have been prepared. Tool-to-storage transport can include empty-bin returns, but the request must explicitly describe its purpose and required bin condition; do not treat every tool pickup as an empty bin.
+
+The seven request states apply to every scenario. CONFIRMED requires receipt from the destination's configured confirmation authority, which can be a tool, storage controller or authorized recipient. The existing tool-specific handshake needs an adapter/contract extension for storage receipt; this documentation does not implement it. The UML should be updated to show the additional routes and confirmation sources.
+
+Exact physical signals and automatic request triggers remain integration decisions. Add simulator evidence for each route before claiming workflow support. Empty-bin return destination and confirmation authority still require agreement.
 
 ## References and interpretation
 
@@ -56,7 +74,7 @@ Interfaces are logical boundaries. A single EE controller may expose several int
 | Storage/dock controller | Presence, QR observation, alignment, transfer sequence and transfer result |
 | Gantry controller | Local retrieval and placement motion |
 | AccessDoor | Access request/result, door state and passage events; physical interlocks remain local |
-| ProcessTool | Material-needed, readiness, authorization and receipt signals |
+| ProcessTool | Material-needed, source pickup readiness/release, destination readiness/authorization, transfer and receipt signals |
 | OperatorInterface | Fill prompts, recorded human confirmations and recovery decisions |
 
 ## Compatibility with the UML
@@ -81,7 +99,7 @@ Keep the UML's seven request states: `PENDING`, `ASSIGNED`, `AWAITING_ACCESS`, `
 | From | Event and guard | To |
 | --- | --- | --- |
 | Start | Valid unique request accepted | PENDING |
-| PENDING | Correct bin prepared and identified; destination freshly ready; AMR available; resources reserved; assignment accepted | ASSIGNED |
+| PENDING | Correct bin identified and ready for this transport purpose; source and destination freshly ready; AMR available; resources reserved; assignment accepted | ASSIGNED |
 | ASSIGNED | Matching bin collected onto AMR and transfer area clear | IN_TRANSIT |
 | ASSIGNED or IN_TRANSIT | Relevant door waiting point reached | AWAITING_ACCESS |
 | AWAITING_ACCESS | Access granted; bin not collected | ASSIGNED |
@@ -90,7 +108,7 @@ Keep the UML's seven request states: `PENDING`, `ASSIGNED`, `AWAITING_ACCESS`, `
 | AWAITING_ACCESS | Denied; retries exhausted | FAILED |
 | IN_TRANSIT | Blocked and fleet reports an available reroute | IN_TRANSIT |
 | IN_TRANSIT | Matching destination transfer complete | DELIVERED |
-| DELIVERED | Matching recipient/tool confirms receipt | CONFIRMED |
+| DELIVERED | Configured destination authority confirms matching receipt | CONFIRMED |
 | ASSIGNED | Pickup timeout or AMR error | FAILED |
 | IN_TRANSIT | AMR error | FAILED |
 | DELIVERED | Confirmation timeout | FAILED |
@@ -101,17 +119,17 @@ Record detailed `execution_phase` separately: `WAITING_FOR_PREPARATION`, `TO_PIC
 
 The dock controller independently follows `IDLE → BIN_SEATED → QR_VERIFIED → READY_FOR_AMR → AMR_DOCKED → TRANSFERRING → CONFIRMED → IDLE`, with a local fault path. Local transfer confirmation does not complete a delivery request.
 
-## Normal delivery
+## Common transport workflow
 
-1. A tool emits a material-needed signal. The Mock MCS converts it to one request; a sponsor MCS can later own that conversion. Deduplicate the original need.
-2. Middleware validates the request, records it and requests preparation through the configured storage integration. An operator may confirm contents preparation.
-3. Storage reports the correct bin identified and ready. Middleware obtains fresh destination readiness.
+1. The MCS or Mock MCS submits a request with explicit pickup and destination IDs. For replenishment, the Mock MCS can convert a tool material-needed signal into one request. Deduplicate the originating need; other transport triggers must be defined explicitly.
+2. Middleware validates and records the request. Storage pickup uses the configured preparation integration; tool pickup waits for source-tool release/readiness. Prompt for contents preparation only when the workflow requires it.
+3. The source reports the correct bin identified and ready. Middleware obtains fresh destination readiness.
 4. The scheduler reserves resources and sends the assignment through FleetManager. Prioritize eligible requests by priority, then accepted time. Define larger numeric priority as more urgent in the prototype.
 5. The AMR reaches pickup; the local controller verifies alignment and authorizes transfer.
 6. Matching collection evidence and transfer clearance advance the request to IN_TRANSIT.
 7. Door access is coordinated at the waiting point when required. Local controllers enforce actual passage permission.
 8. Before unloading, recheck destination identity, readiness and authorization. The destination controller confirms the bin transfer.
-9. Mark DELIVERED and release the AMR only after confirmed physical clearance. Tool/recipient receipt advances to CONFIRMED.
+9. Mark DELIVERED and release the AMR only after confirmed physical clearance. Matching receipt from the configured destination authority advances to CONFIRMED.
 10. Report transitions to MCS and retain event and command history.
 
 ## Tracking and persistence
@@ -164,6 +182,7 @@ Python remains the middleware language. Keep domain dataclasses; validate extern
 | Door ownership | Middleware calls AccessDoor; local controller enforces interlocks | Authorization method and signal timing |
 | Alignment and transfer evidence | Explicit simulator events | Sensors and responsible controller |
 | Readiness freshness and timeouts | Configurable simulation settings | EE/ME measurements and sponsor values |
+| Tool-source transport | Explicit tool pickup readiness/release and matching collection evidence | EE signals and physical handoff mechanism |
 | Empty-bin return | Separate request with EMPTIED readiness | Return destination and receipt authority |
 
 These choices allow core coding now. Do not claim the return workflow or a physical interface is complete until its evidence and confirmation authority are defined.
