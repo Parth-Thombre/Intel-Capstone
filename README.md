@@ -43,6 +43,39 @@ python -m pytest
 ```
 
 
+## Application startup check
+
+After installing the development package and activating the Python 3.12 environment:
+
+```bash
+python -m capstone --check
+```
+
+This validates configuration, initializes console logging and constructs an in-memory mock MCS, one simulated AMR/fleet manager, a simulated gantry and a simulated operator interface. It prints `Startup check passed (mode=simulation). No delivery tasks were started.` and exits with code `0`. This checks configuration and dependency construction, not equipment readiness or a completed transport workflow.
+
+The check creates no delivery requests, sends no movement/transfer commands and opens no device or broker connections. Invalid configuration produces a `Configuration error` on stderr and exits with code `2` before constructing the application. Informational logs also go to stderr; the success message goes to stdout.
+
+Use `python -m capstone --help` for options. Running `python -m capstone` without options prints help and exits; a persistent service loop is not implemented. Application construction is available to developers as `capstone.main.build_application(config)` and does not start the interactive operator demo.
+
+## Configuration
+
+`capstone.config.load_config()` loads validated settings for the application startup skeleton. The `python -m capstone --check` entry point uses these settings to initialize logging and construct the simulation dependencies. The separate operator demo does not yet use this configuration.
+
+| Environment variable | Default | Accepted values |
+| --- | --- | --- |
+| `CAPSTONE_MODE` | `simulation` | `simulation` only; physical hardware mode is not implemented |
+| `CAPSTONE_LOG_LEVEL` | `INFO` | `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL` |
+
+Missing values use the defaults. Values are trimmed and case-normalized; explicitly empty or unsupported values raise `ConfigurationError` naming the setting. Loading configuration does not configure logging, create files, connect to devices or send commands. Environment files such as `.env` are not loaded automatically.
+
+After installing the package, inspect configuration from the repository root:
+
+```bash
+python -c "from capstone.config import load_config; print(load_config())"
+```
+
+Set `CAPSTONE_LOG_LEVEL` in the process environment to override the logging setting. Tests and callers can pass a mapping such as `load_config({"CAPSTONE_LOG_LEVEL": "DEBUG"})` to avoid reading the process environment. Returned settings are immutable.
+
 ## Status
 Skeleton only. The decision algorithm is a placeholder (first available AMR). Retry limits, timeouts,
 message formats and the return trip for empty bins are TBD (see open questions in the design doc).
