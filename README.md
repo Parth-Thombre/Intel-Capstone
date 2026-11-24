@@ -1,6 +1,9 @@
 # Capstone Middleware (skeleton)
 
 Software-only simulation of the middleware between the MCS, fleet managers, door, gantry, operators and process tools.
+
+The target transport scope includes storage handoff to process tool, process tool to storage handoff, and process tool to another process tool. All three use a delivery request with pickup and destination points. The current skeleton and operator demo do not yet implement complete workflows for all three routes.
+
 Design docs (UML class, state machine, sequence diagram) go in `docs/`.
 
 ## Layout
