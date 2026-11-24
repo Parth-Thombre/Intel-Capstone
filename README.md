@@ -43,6 +43,25 @@ python -m pytest
 ```
 
 
+## Configuration
+
+`capstone.config.load_config()` loads validated settings for the application startup skeleton. The settings are not yet wired into the operator demo or an application entry point; startup wiring is a separate implementation step.
+
+| Environment variable | Default | Accepted values |
+| --- | --- | --- |
+| `CAPSTONE_MODE` | `simulation` | `simulation` only; physical hardware mode is not implemented |
+| `CAPSTONE_LOG_LEVEL` | `INFO` | `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL` |
+
+Missing values use the defaults. Values are trimmed and case-normalized; explicitly empty or unsupported values raise `ConfigurationError` naming the setting. Loading configuration does not configure logging, create files, connect to devices or send commands. Environment files such as `.env` are not loaded automatically.
+
+After installing the package, inspect configuration from the repository root:
+
+```bash
+python -c "from capstone.config import load_config; print(load_config())"
+```
+
+Set `CAPSTONE_LOG_LEVEL` in the process environment to override the logging setting. Tests and callers can pass a mapping such as `load_config({"CAPSTONE_LOG_LEVEL": "DEBUG"})` to avoid reading the process environment. Returned settings are immutable.
+
 ## Status
 Skeleton only. The decision algorithm is a placeholder (first available AMR). Retry limits, timeouts,
 message formats and the return trip for empty bins are TBD (see open questions in the design doc).
