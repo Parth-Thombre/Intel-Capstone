@@ -17,7 +17,7 @@ Design docs (UML class, state machine, sequence diagram) go in `docs/`.
 - `src/capstone/main.py`      simulation composition and startup check
 - `src/capstone/__main__.py`  `python -m capstone` entry point
 - `src/capstone/simulators/`  fake versions of those parties, for testing without the fab
-- `tests/`                    pytest tests (state machine, translator, end-to-end delivery)
+- `tests/`                    middleware, operator, configuration and installed-package startup tests
 
 ## Implementation boundaries
 
@@ -57,6 +57,18 @@ python -m pytest
 ```
 
 
+## Developer handoff
+
+After setup, verify the environment and skeleton before starting a feature:
+
+```bash
+python -m pip check
+python -m capstone --check
+python -m pytest
+```
+
+Run `python -m pytest tests/test_startup.py -q` for startup smoke tests only. These tests launch the installed package from outside the repository, verify exit/error behavior and check that construction issues no delivery actions. See the [developer handoff guide](docs/DEVELOPER_HANDOFF.md) for module ownership, available behavior and troubleshooting.
+
 ## Application startup check
 
 After installing the development package and activating the Python 3.12 environment:
@@ -91,22 +103,24 @@ python -c "from capstone.config import load_config; print(load_config())"
 Set `CAPSTONE_LOG_LEVEL` in the process environment to override the logging setting. Tests and callers can pass a mapping such as `load_config({"CAPSTONE_LOG_LEVEL": "DEBUG"})` to avoid reading the process environment. Returned settings are immutable.
 
 ## Status
-Skeleton only. The decision algorithm is a placeholder (first available AMR). Retry limits, timeouts,
-message formats and the return trip for empty bins are TBD (see open questions in the design doc).
+The implementation skeleton includes installable packaging, validated startup configuration, a nonblocking application check, module boundaries and startup smoke tests. The operator console and simplified in-memory middleware flow remain available.
+
+Complete execution of the three transport routes, shared event schemas, reliable scheduling/correlation, MQTT, database persistence, timeout/recovery behavior and hardware integration remain future implementation work. Passing startup tests verifies the skeleton, not these delivery capabilities.
 
 ## Operator console demo
 A console version of the operator interface (shows the fill prompt, accepts `done`). Run from the repo root:
 
-    python3 demo_operator.py
+    python demo_operator.py
 
 Commands: `list`, `done [bin_id]`, `quit`. Code: `src/capstone/simulators/console_operator.py`.
 
 ### Roles (optional)
-    python3 demo_operator.py filler        # bin filler: list, loaded
-    python3 demo_operator.py technician    # tool technician: list, empty, request, refill
+    python demo_operator.py filler        # bin filler: list, loaded
+    python demo_operator.py technician    # tool technician: list, empty, request, refill
 
 Operator messages follow the dictionary envelope in `docs/INTERFACES.md` (`operator.bin_loaded`,
 `operator.bin_emptied`, `operator.material_requested`). Roles are a prototype setting, not real accounts.
+
 ## Architecture and coding plan
 
 The repository currently contains a middleware skeleton. The documents below describe the target implementation and distinguish working prototype choices from unresolved physical interfaces.
@@ -114,6 +128,7 @@ The repository currently contains a middleware skeleton. The documents below des
 - [Architecture and ownership](docs/ARCHITECTURE.md)
 - [Message and interface contracts](docs/INTERFACES.md)
 - [Implementation tasks and acceptance scenarios](docs/IMPLEMENTATION_PLAN.md)
+- [Developer setup verification and handoff](docs/DEVELOPER_HANDOFF.md)
 
 Start with A1 (shared models/contracts), then implement the UML state machine and simulators. Preserve the existing UML-facing interfaces while adding transport, persistence and recovery behind them.
 
