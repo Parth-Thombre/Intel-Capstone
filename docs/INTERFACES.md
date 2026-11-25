@@ -47,6 +47,23 @@ Assignment accepted is not collection. Robot arrival is not transfer. Destinatio
 
 Repeated receipt of the same event has no second effect. A different event ID for an already completed physical action must also be harmless: enforce command and phase guards. Record rejected or contradictory events with a reason; do not overwrite verified custody silently.
 
+## Python implementation boundaries
+
+| Boundary | Current location | Implementation handoff |
+| --- | --- | --- |
+| MCS | `interfaces/mcs.py` | Preserve `receive_status`; implement incoming request translation in an adapter |
+| Fleet | `interfaces/fleet_manager.py` | Preserve assignment and status operations; distinguish acceptance from collection |
+| Storage | `interfaces/storage_gantry.py` | Preserve preparation facade; define receiving/readiness/receipt extensions before return execution |
+| Door | `interfaces/access_door.py` | Preserve access and open-state operations; correlate passage evidence in future events |
+| Operator | `interfaces/operator_interface.py` | Preserve fill prompts and existing reports; route prompts according to transport purpose |
+| Tool | `interfaces/process_tool.py` | Implement `ProcessToolInterface.request_pickup(request)` and `request_delivery(request)` in tool adapters |
+
+Paths above are relative to `src/capstone/`. The tool interface is a new outbound extension; `models/tool_handshake.py` still owns the existing `ProcessTool` and `ToolHandshake` data classes. Abstract tool methods raise `NotImplementedError` if invoked through an unimplemented base operation. They are not connected to the current middleware or startup composition.
+
+Tool request methods receive a `DeliveryRequest`, using `pickup_point` for release and `delivery_point` for acceptance. Tool-to-tool transport routes these calls to different endpoint adapters. A normal return from either method does not authorize movement or confirm a transfer. Readiness, acceptance, collection, destination transfer and receipt must arrive as separately correlated evidence; formal event schemas and rejection reporting remain part of the shared-model and adapter work.
+
+The importable `adapters`, `messaging` and `persistence` packages contain responsibility descriptions only. Implement protocol conversion, queued transport/routing and transactional repositories in those respective packages. Do not add side effects to package imports or make a placeholder return a fabricated success result.
+
 ## Prototype topics
 
 ```text

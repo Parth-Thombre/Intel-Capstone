@@ -9,9 +9,23 @@ Design docs (UML class, state machine, sequence diagram) go in `docs/`.
 ## Layout
 - `src/capstone/models/`      data classes, one file per class, plus `enums.py`
 - `src/capstone/middleware/`  `middleware.py` (receive_* operations), `request_state.py` (state machine), `message_translator.py`
-- `src/capstone/interfaces/`  the outside parties as abstract classes the middleware calls
+- `src/capstone/interfaces/`  abstract external-system contracts, including source/destination tool requests
+- `src/capstone/adapters/`    placeholder package for protocol translations
+- `src/capstone/messaging/`   placeholder package for transport, validation and event routing
+- `src/capstone/persistence/` placeholder package for database repositories and migrations
+- `src/capstone/config.py`    validated startup settings
+- `src/capstone/main.py`      simulation composition and startup check
+- `src/capstone/__main__.py`  `python -m capstone` entry point
 - `src/capstone/simulators/`  fake versions of those parties, for testing without the fab
 - `tests/`                    pytest tests (state machine, translator, end-to-end delivery)
+
+## Implementation boundaries
+
+The new package directories establish places for team implementation; they do not provide MQTT, physical adapters or database persistence yet. Importing them performs no setup. Keep workflow decisions in `middleware`, wire shared event types in `models`, external protocol translation in `adapters`, network transport/routing in `messaging`, and transactional storage in `persistence`.
+
+`interfaces/process_tool.py` defines `ProcessToolInterface.request_pickup(request)` and `request_delivery(request)` for future tool adapters. Both are abstract, unimplemented action requests. They do not replace the `ProcessTool` data class or imply readiness, authorization, completed transfer or receipt. Tool-to-tool transport uses a source tool adapter and a destination tool adapter; tool-to-storage transport uses the source tool adapter and the storage receiving integration.
+
+The existing MCS, FleetManager, StorageGantry, AccessDoor and OperatorInterface contracts remain available. The startup check still constructs only the existing in-process simulators; the new tool interface and package placeholders are not wired into transport execution. See [interface contracts](docs/INTERFACES.md) for implementation handoff details.
 
 ## Development setup
 
